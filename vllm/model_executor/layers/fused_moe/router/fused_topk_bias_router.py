@@ -121,7 +121,12 @@ def vllm_topk_softplus_sqrt(
 ) -> tuple[torch.Tensor, ...]:
     from vllm.platforms import current_platform
 
-    if current_platform.is_xpu():
+    # DS4-REAP144: the fused hash-gating kernel rejects non-standard expert counts
+    # ("Unsupported expert number: 144"), so REAP-pruned DeepSeek-V4-Flash cannot load on
+    # CUDA. vLLM already ships a faithful pure-torch equivalent, but gates it to XPU only.
+    # Routing is a tiny op, so taking the torch path costs ~nothing and is representative.
+    # Upstream report: https://github.com/vllm-project/vllm/issues/51521
+    if True:  # was: current_platform.is_xpu()
         return _topk_softplus_sqrt_torch(
             topk_weights,
             topk_indices,
